@@ -8,6 +8,9 @@ const client = generateClient<Schema>();
 interface Todo {
   id: string;
   content: string;
+  owner: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 function App() {
@@ -16,9 +19,18 @@ function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
 
   useEffect(() => {
-    client.models.Todo.observeQuery().subscribe({
-      next: (data: { items: Todo[] }) => setTodos([...data.items]),
+    const sub = client.models.Todo.observeQuery().subscribe({
+      next: ({ items }) => {
+        // Type assertion to handle the nullable content
+        const typedItems = items.map(item => ({
+          ...item,
+          content: item.content || ''
+        })) as Todo[];
+        setTodos(typedItems);
+      }
     });
+
+    return () => sub.unsubscribe();
   }, []);
 
   function createTodo() {
@@ -48,9 +60,6 @@ function App() {
       <div>
         🥳 App successfully hosted. Try creating a new todo.
         <br />
-        <a href="https://docs.amplify.aws/react/start/quickstart/#make-frontend-updates">
-          Review next step of this tutorial.
-        </a>
       </div>
       <button onClick={signOut}>Sign out</button>
     </main>
